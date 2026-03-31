@@ -2,18 +2,23 @@
 fn main() {
     use onepassword_sdk::{Client, SecretsApi};
 
+    let account = std::env::var("OP_ACCOUNT")
+        .expect("Set OP_ACCOUNT to your 1Password sign-in address (e.g. my.1password.com)");
+    let secret_ref = std::env::var("OP_SECRET_REF")
+        .unwrap_or_else(|_| "op://Private/chess.com/username".to_string());
+
     let client = Client::builder()
-        .desktop_app_integration("my-account")
-        .integration_info("My Rust App", "v1.0.0")
+        .desktop_app_integration(&account)
+        .integration_info("1Password Rust SDK Example", "v0.1.0")
         .build()
         .expect("Failed to create client");
 
     let secret = client
         .secrets()
-        .resolve("op://vault/item/field")
+        .resolve(&secret_ref)
         .expect("Failed to resolve secret");
 
-    println!("Secret: {secret}");
+    println!("{secret}");
 }
 
 #[cfg(not(feature = "desktop"))]

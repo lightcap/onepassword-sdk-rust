@@ -8,9 +8,10 @@ description = "1Password SDK for Rust"
 
 [features]
 default = []
-desktop = ["dep:libloading"]
+desktop = ["dep:libloading", "dep:base64"]
 
 [dependencies]
+base64 = { version = "0.22", optional = true }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 extism = "1"
 getrandom = "0.2"

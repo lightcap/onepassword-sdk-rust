@@ -45,7 +45,9 @@ impl ClientConfig {
         Self {
             sa_token: String::new(),
             language: SDK_LANGUAGE.to_string(),
-            sdk_version: env!("CARGO_PKG_VERSION").to_string(),
+            // Must match the Go SDK's version-build format (7-digit semver: Mmmppbb)
+            // for the WASM core we embedded (v0.4.1-beta.1 = 0040101)
+            sdk_version: "0040101".to_string(),
             integration_name: "Unknown".to_string(),
             integration_version: "Unknown".to_string(),
             request_library_name: DEFAULT_REQUEST_LIBRARY.to_string(),
