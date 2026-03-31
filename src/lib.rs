@@ -13,6 +13,8 @@ mod secrets;
 mod types;
 mod vaults;
 
+#[cfg(feature = "desktop")]
+#[allow(unsafe_code)]
 mod core_shared_lib;
 
 pub use client::{Client, ClientBuilder};
