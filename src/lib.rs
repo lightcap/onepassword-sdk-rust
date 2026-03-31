@@ -3,6 +3,8 @@
 #[allow(dead_code)]
 mod core;
 #[allow(dead_code)]
+mod core_extism;
+#[allow(dead_code)]
 mod errors;
 mod types;
 
