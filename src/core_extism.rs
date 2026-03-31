@@ -89,7 +89,10 @@ impl ExtismCore {
 
 impl Core for ExtismCore {
     fn init_client(&self, config: &[u8]) -> Result<Vec<u8>, SdkError> {
-        let mut plugin = self.plugin.lock().unwrap();
+        let mut plugin = self
+            .plugin
+            .lock()
+            .map_err(|e| SdkError::Plugin(format!("mutex poisoned: {e}")))?;
         let res = plugin
             .call::<&[u8], &[u8]>("init_client", config)
             .map_err(|e| SdkError::Plugin(e.to_string()))?;
@@ -103,7 +106,10 @@ impl Core for ExtismCore {
                 MESSAGE_LIMIT
             )));
         }
-        let mut plugin = self.plugin.lock().unwrap();
+        let mut plugin = self
+            .plugin
+            .lock()
+            .map_err(|e| SdkError::Plugin(format!("mutex poisoned: {e}")))?;
         let res = plugin
             .call::<&[u8], &[u8]>("invoke", invoke_config)
             .map_err(|e| SdkError::Plugin(e.to_string()))?;
@@ -111,8 +117,9 @@ impl Core for ExtismCore {
     }
 
     fn release_client(&self, client_id: &[u8]) {
-        let mut plugin = self.plugin.lock().unwrap();
-        let _ = plugin.call::<&[u8], &[u8]>("release_client", client_id);
+        if let Ok(mut plugin) = self.plugin.lock() {
+            let _ = plugin.call::<&[u8], &[u8]>("release_client", client_id);
+        }
     }
 }
 

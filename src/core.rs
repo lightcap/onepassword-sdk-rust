@@ -14,7 +14,7 @@ pub(crate) trait Core: Send + Sync {
     fn release_client(&self, client_id: &[u8]);
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub(crate) struct ClientConfig {
     #[serde(rename = "serviceAccountToken")]
     pub sa_token: String,
@@ -38,6 +38,20 @@ pub(crate) struct ClientConfig {
     pub system_arch: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_name: Option<String>,
+}
+
+impl std::fmt::Debug for ClientConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClientConfig")
+            .field("sa_token", &"[REDACTED]")
+            .field("language", &self.language)
+            .field("sdk_version", &self.sdk_version)
+            .field("integration_name", &self.integration_name)
+            .field("integration_version", &self.integration_version)
+            .field("system_os", &self.system_os)
+            .field("system_arch", &self.system_arch)
+            .finish()
+    }
 }
 
 impl ClientConfig {

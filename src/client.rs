@@ -88,6 +88,12 @@ impl ClientBuilder {
             ));
         }
 
+        if !has_sa_token && !has_desktop {
+            return Err(SdkError::Config(
+                "must set either service_account_token or desktop_app_integration".to_string(),
+            ));
+        }
+
         let core_impl: Box<dyn crate::core::Core> = if has_desktop {
             #[cfg(feature = "desktop")]
             {
@@ -138,7 +144,12 @@ pub(crate) fn client_invoke(
 
     match inner.core.invoke(&invoke_config) {
         Ok(response) => Ok(response),
-        Err(e) => Err(unmarshal_error(&e.to_string())),
+        Err(SdkError::Plugin(msg)) => {
+            // Extism surfaces WASM core errors as plugin errors containing JSON.
+            // Try to parse the JSON error; if it fails, return the plugin error as-is.
+            Err(unmarshal_error(&msg))
+        }
+        Err(e) => Err(e),
     }
 }
 
