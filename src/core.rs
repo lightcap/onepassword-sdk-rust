@@ -111,6 +111,7 @@ impl CoreWrapper {
 /// The inner client state shared by all API implementations.
 pub(crate) struct InnerClient {
     pub id: u64,
+    #[allow(dead_code)]
     pub config: ClientConfig,
     pub core: CoreWrapper,
 }

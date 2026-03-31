@@ -1,12 +1,27 @@
 #![deny(unsafe_code)]
 
-#[allow(dead_code)]
+mod client;
 mod core;
-#[allow(dead_code)]
 mod core_extism;
-#[allow(dead_code)]
+mod environments;
 mod errors;
+mod groups;
+mod items;
+mod items_files;
+mod items_shares;
+mod secrets;
 mod types;
+mod vaults;
 
+mod core_shared_lib;
+
+pub use client::{Client, ClientBuilder};
+pub use environments::EnvironmentsApi;
 pub use errors::SdkError;
+pub use groups::GroupsApi;
+pub use items::ItemsApi;
+pub use items_files::ItemsFilesApi;
+pub use items_shares::ItemsSharesApi;
+pub use secrets::{Secrets, SecretsApi};
 pub use types::*;
+pub use vaults::VaultsApi;
