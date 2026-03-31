@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Serialize;
 
@@ -126,10 +127,19 @@ impl CoreWrapper {
 
 /// The inner client state shared by all API implementations.
 pub(crate) struct InnerClient {
-    pub id: u64,
-    #[allow(dead_code)]
+    pub id: AtomicU64,
     pub config: ClientConfig,
     pub core: CoreWrapper,
+}
+
+impl InnerClient {
+    pub fn client_id(&self) -> u64 {
+        self.id.load(Ordering::Relaxed)
+    }
+
+    pub fn set_client_id(&self, id: u64) {
+        self.id.store(id, Ordering::Relaxed);
+    }
 }
 
 #[cfg(test)]

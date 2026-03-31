@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 use crate::core::{ClientConfig, CoreWrapper, InnerClient, Invocation, InvokeConfig, Parameters};
 use crate::core_extism::ExtismCore;
@@ -17,7 +18,7 @@ pub struct Client {
 impl std::fmt::Debug for Client {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Client")
-            .field("id", &self.inner.id)
+            .field("id", &self.inner.client_id())
             .finish()
     }
 }
@@ -52,7 +53,7 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        self.inner.core.release_client(self.inner.id);
+        self.inner.core.release_client(self.inner.client_id());
     }
 }
 
@@ -117,7 +118,7 @@ impl ClientBuilder {
             .map_err(|e| SdkError::Config(format!("error initializing client: {e}")))?;
 
         let inner = Arc::new(InnerClient {
-            id: client_id,
+            id: AtomicU64::new(client_id),
             config: self.config,
             core,
         });
@@ -127,6 +128,7 @@ impl ClientBuilder {
 }
 
 /// Invoke a method on the WASM core. Used by all API implementations.
+/// Automatically retries once on DesktopSessionExpired by re-initializing the client.
 pub(crate) fn client_invoke(
     inner: &InnerClient,
     method: &str,
@@ -134,10 +136,10 @@ pub(crate) fn client_invoke(
 ) -> Result<String, SdkError> {
     let invoke_config = InvokeConfig {
         invocation: Invocation {
-            client_id: Some(inner.id),
+            client_id: Some(inner.client_id()),
             parameters: Parameters {
                 name: method.to_string(),
-                parameters: params,
+                parameters: params.clone(),
             },
         },
     };
@@ -145,9 +147,24 @@ pub(crate) fn client_invoke(
     match inner.core.invoke(&invoke_config) {
         Ok(response) => Ok(response),
         Err(SdkError::Plugin(msg)) => {
-            // Extism surfaces WASM core errors as plugin errors containing JSON.
-            // Try to parse the JSON error; if it fails, return the plugin error as-is.
-            Err(unmarshal_error(&msg))
+            let err = unmarshal_error(&msg);
+            if matches!(err, SdkError::DesktopSessionExpired(_)) {
+                // Re-initialize the client and retry once.
+                let new_id = inner.core.init_client(&inner.config)?;
+                inner.set_client_id(new_id);
+                let retry_config = InvokeConfig {
+                    invocation: Invocation {
+                        client_id: Some(new_id),
+                        parameters: Parameters {
+                            name: method.to_string(),
+                            parameters: params,
+                        },
+                    },
+                };
+                inner.core.invoke(&retry_config)
+            } else {
+                Err(err)
+            }
         }
         Err(e) => Err(e),
     }

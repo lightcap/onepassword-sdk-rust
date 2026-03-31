@@ -45,9 +45,17 @@ pub struct GetVariablesResponse {
     pub variables: Vec<EnvironmentVariable>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GeneratePasswordResponse {
     pub password: String,
+}
+
+impl std::fmt::Debug for GeneratePasswordResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GeneratePasswordResponse")
+            .field("password", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,7 +202,7 @@ pub struct Website {
     pub autofill_behavior: AutofillBehavior,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemField {
     pub id: String,
@@ -205,6 +213,19 @@ pub struct ItemField {
     pub value: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<ItemFieldDetails>,
+}
+
+impl std::fmt::Debug for ItemField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ItemField")
+            .field("id", &self.id)
+            .field("title", &self.title)
+            .field("section_id", &self.section_id)
+            .field("field_type", &self.field_type)
+            .field("value", &"[REDACTED]")
+            .field("details", &self.details)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -415,12 +436,22 @@ pub struct ItemsUpdateAllResponse {
     pub individual_responses: Vec<BatchResponse<Item, ItemUpdateFailureReason>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedReference {
     pub secret: String,
     pub item_id: String,
     pub vault_id: String,
+}
+
+impl std::fmt::Debug for ResolvedReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResolvedReference")
+            .field("secret", &"[REDACTED]")
+            .field("item_id", &self.item_id)
+            .field("vault_id", &self.vault_id)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
