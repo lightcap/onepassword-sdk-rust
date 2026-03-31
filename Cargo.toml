@@ -1,0 +1,22 @@
+[package]
+name = "onepassword-sdk"
+version = "0.4.1-beta.1"
+edition = "2024"
+publish = false
+license = "MIT"
+description = "1Password SDK for Rust"
+
+[features]
+default = []
+desktop = ["dep:libloading"]
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+extism = "1"
+getrandom = "0.2"
+libloading = { version = "0.8", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]

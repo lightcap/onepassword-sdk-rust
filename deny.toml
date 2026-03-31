@@ -1,0 +1,31 @@
+[graph]
+all-features = true
+
+[advisories]
+unmaintained = "warn"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "OpenSSL",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[[licenses.exceptions]]
+allow = ["MPL-2.0"]
+crate = "webpki-roots"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
