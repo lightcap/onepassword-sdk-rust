@@ -137,11 +137,11 @@ pub(crate) struct InnerClient {
 
 impl InnerClient {
     pub fn client_id(&self) -> u64 {
-        self.id.load(Ordering::Relaxed)
+        self.id.load(Ordering::Acquire)
     }
 
     pub fn set_client_id(&self, id: u64) {
-        self.id.store(id, Ordering::Relaxed);
+        self.id.store(id, Ordering::Release);
     }
 }
 

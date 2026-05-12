@@ -176,11 +176,25 @@ fn error_from_return_code(ret_code: i32) -> Result<(), SdkError> {
     Err(SdkError::SharedLib(msg))
 }
 
+fn home_dir() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var("USERPROFILE")
+            .ok()
+            .map(PathBuf::from)
+            .unwrap_or_default()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::env::var("HOME")
+            .ok()
+            .map(PathBuf::from)
+            .unwrap_or_default()
+    }
+}
+
 fn find_1password_lib_path() -> Result<PathBuf, SdkError> {
-    let home = std::env::var("HOME")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_default();
+    let home = home_dir();
 
     let locations: Vec<PathBuf> = if cfg!(target_os = "macos") {
         vec![
