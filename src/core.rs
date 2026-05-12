@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Serialize;
@@ -133,6 +134,7 @@ pub(crate) struct InnerClient {
     pub id: AtomicU64,
     pub config: ClientConfig,
     pub core: CoreWrapper,
+    pub retry_lock: Mutex<()>,
 }
 
 impl InnerClient {

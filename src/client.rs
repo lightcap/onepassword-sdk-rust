@@ -122,6 +122,7 @@ impl ClientBuilder {
             id: AtomicU64::new(client_id),
             config: self.config,
             core,
+            retry_lock: std::sync::Mutex::new(()),
         });
 
         Ok(Client { inner })
@@ -140,7 +141,7 @@ pub(crate) fn client_invoke(
             client_id: Some(inner.client_id()),
             parameters: Parameters {
                 name: method.to_string(),
-                parameters: params.clone(),
+                parameters: params,
             },
         },
     };
@@ -150,30 +151,45 @@ pub(crate) fn client_invoke(
         Err(err) => {
             let err = unmarshal_core_error(err);
             if matches!(err, SdkError::DesktopSessionExpired(_)) {
-                // Re-initialize the client and retry once.
-                let new_id = inner
-                    .core
-                    .init_client(&inner.config)
-                    .map_err(unmarshal_core_error)?;
-                inner.set_client_id(new_id);
-                let retry_config = InvokeConfig {
-                    invocation: Invocation {
-                        client_id: Some(new_id),
-                        parameters: Parameters {
-                            name: method.to_string(),
-                            parameters: params,
-                        },
-                    },
-                };
-                inner
-                    .core
-                    .invoke(&retry_config)
-                    .map_err(unmarshal_core_error)
+                retry_invoke(
+                    inner,
+                    method,
+                    invoke_config.invocation.parameters.parameters,
+                )
             } else {
                 Err(err)
             }
         }
     }
+}
+
+fn retry_invoke(
+    inner: &InnerClient,
+    method: &str,
+    params: HashMap<String, serde_json::Value>,
+) -> Result<String, SdkError> {
+    let _guard = inner
+        .retry_lock
+        .lock()
+        .map_err(|e| SdkError::Config(format!("retry lock poisoned: {e}")))?;
+    let new_id = inner
+        .core
+        .init_client(&inner.config)
+        .map_err(unmarshal_core_error)?;
+    inner.set_client_id(new_id);
+    let retry_config = InvokeConfig {
+        invocation: Invocation {
+            client_id: Some(new_id),
+            parameters: Parameters {
+                name: method.to_string(),
+                parameters: params,
+            },
+        },
+    };
+    inner
+        .core
+        .invoke(&retry_config)
+        .map_err(unmarshal_core_error)
 }
 
 #[cfg(test)]
@@ -223,6 +239,7 @@ mod tests {
                     invoke_calls: AtomicUsize::new(0),
                 }),
             },
+            retry_lock: std::sync::Mutex::new(()),
         };
 
         let response = client_invoke(&inner, "SecretsResolve", HashMap::new()).unwrap();
