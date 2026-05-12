@@ -115,8 +115,7 @@ impl ClientBuilder {
 
         let client_id = core
             .init_client(&self.config)
-            .map_err(unmarshal_core_error)
-            .map_err(|e| SdkError::Config(format!("error initializing client: {e}")))?;
+            .map_err(unmarshal_core_error)?;
 
         let inner = Arc::new(InnerClient {
             id: AtomicU64::new(client_id),
