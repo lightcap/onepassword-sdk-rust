@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Serialize;
 
-use crate::errors::SdkError;
+use crate::errors::{SdkError, invalid_utf8_error};
 
 pub(crate) const SDK_LANGUAGE: &str = "Rust";
 pub(crate) const DEFAULT_REQUEST_LIBRARY: &str = "reqwest";
@@ -17,7 +17,10 @@ pub(crate) trait Core: Send + Sync {
 
 #[derive(Serialize)]
 pub(crate) struct ClientConfig {
-    #[serde(rename = "serviceAccountToken")]
+    #[serde(
+        rename = "serviceAccountToken",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub sa_token: String,
     #[serde(rename = "programmingLanguage")]
     pub language: String,
@@ -37,7 +40,7 @@ pub(crate) struct ClientConfig {
     pub system_os_version: String,
     #[serde(rename = "architecture")]
     pub system_arch: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing)]
     pub account_name: Option<String>,
 }
 
@@ -115,7 +118,7 @@ impl CoreWrapper {
             )));
         }
         let res = self.inner.invoke(&input)?;
-        Ok(String::from_utf8_lossy(&res).into_owned())
+        String::from_utf8(res).map_err(invalid_utf8_error)
     }
 
     pub fn release_client(&self, client_id: u64) {
@@ -175,5 +178,63 @@ mod tests {
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"clientId\":42"));
         assert!(json.contains("\"name\":\"SecretsResolve\""));
+    }
+
+    #[test]
+    fn service_account_config_serializes_token() {
+        let mut config = ClientConfig::new_default();
+        config.sa_token = "ops_test".to_string();
+
+        let value = serde_json::to_value(&config).unwrap();
+        assert_eq!(value["serviceAccountToken"], "ops_test");
+    }
+
+    #[test]
+    fn desktop_config_omits_auth_fields_from_core_config() {
+        let mut config = ClientConfig::new_default();
+        config.account_name = Some("myaccount".to_string());
+
+        let value = serde_json::to_value(&config).unwrap();
+        assert!(value.get("serviceAccountToken").is_none());
+        assert!(value.get("account_name").is_none());
+    }
+
+    struct InvalidUtf8Core;
+
+    impl Core for InvalidUtf8Core {
+        fn init_client(&self, _config: &[u8]) -> Result<Vec<u8>, SdkError> {
+            Ok(Vec::new())
+        }
+
+        fn invoke(&self, _invoke_config: &[u8]) -> Result<Vec<u8>, SdkError> {
+            Ok(vec![0xff])
+        }
+
+        fn release_client(&self, _client_id: &[u8]) {}
+    }
+
+    #[test]
+    fn invoke_rejects_invalid_utf8_response() {
+        let wrapper = CoreWrapper {
+            inner: Box::new(InvalidUtf8Core),
+        };
+        let config = InvokeConfig {
+            invocation: Invocation {
+                client_id: None,
+                parameters: Parameters {
+                    name: "InvalidUtf8".to_string(),
+                    parameters: HashMap::new(),
+                },
+            },
+        };
+
+        let err = wrapper.invoke(&config).unwrap_err();
+        match err {
+            SdkError::Core { name, message } => {
+                assert_eq!(name, "InvalidUtf8");
+                assert!(message.contains("not valid UTF-8"));
+            }
+            _ => panic!("expected InvalidUtf8 core error"),
+        }
     }
 }

@@ -37,7 +37,7 @@ struct Request {
 }
 
 /// JSON response envelope received from the shared library.
-/// The `payload` field is a byte array (matching Go's `[]byte` JSON encoding).
+/// The `payload` field is a byte array (matching Rust/Python SDK core encoding).
 #[derive(Deserialize)]
 struct Response {
     success: bool,
@@ -132,8 +132,10 @@ impl SharedLibCore {
         if response.success {
             Ok(response.payload)
         } else {
-            let msg = String::from_utf8_lossy(&response.payload);
-            Err(SdkError::SharedLib(msg.into_owned()))
+            let msg = String::from_utf8(response.payload).map_err(|e| {
+                SdkError::SharedLib(format!("error payload was not valid UTF-8: {e}"))
+            })?;
+            Err(SdkError::SharedLib(msg))
         }
     }
 }
@@ -221,4 +223,34 @@ fn find_1password_lib_path() -> Result<PathBuf, SdkError> {
             .collect::<Vec<_>>()
             .join(", ")
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn request_payload_serializes_as_base64() {
+        let request = Request {
+            kind: "invoke".to_string(),
+            account_name: "account".to_string(),
+            payload: base64::engine::general_purpose::STANDARD.encode(b"payload"),
+        };
+
+        let value = serde_json::to_value(&request).unwrap();
+        assert_eq!(value["payload"], "cGF5bG9hZA==");
+    }
+
+    #[test]
+    fn response_payload_deserializes_from_byte_array() {
+        let response_json = serde_json::json!({
+            "success": true,
+            "payload": [112, 97, 121, 108, 111, 97, 100],
+        })
+        .to_string();
+
+        let response: Response = serde_json::from_str(&response_json).unwrap();
+        assert!(response.success);
+        assert_eq!(response.payload, b"payload");
+    }
 }

@@ -30,21 +30,41 @@ struct CoreError {
     message: String,
 }
 
-/// Deserialize a JSON error string from the WASM core into an SdkError.
-pub(crate) fn unmarshal_error(err: &str) -> SdkError {
+fn try_unmarshal_error(err: &str) -> Option<SdkError> {
     match serde_json::from_str::<CoreError>(err) {
         Ok(core_err) => match core_err.name.as_str() {
-            "DesktopSessionExpired" => SdkError::DesktopSessionExpired(core_err.message),
-            "RateLimitExceeded" => SdkError::RateLimitExceeded(core_err.message),
-            _ => SdkError::Core {
+            "DesktopSessionExpired" => Some(SdkError::DesktopSessionExpired(core_err.message)),
+            "RateLimitExceeded" => Some(SdkError::RateLimitExceeded(core_err.message)),
+            _ => Some(SdkError::Core {
                 name: core_err.name,
                 message: core_err.message,
-            },
+            }),
         },
-        Err(_) => SdkError::Core {
-            name: "Unknown".to_string(),
-            message: err.to_string(),
-        },
+        Err(_) => None,
+    }
+}
+
+/// Deserialize a JSON error string from the WASM core into an SdkError.
+pub(crate) fn unmarshal_error(err: &str) -> SdkError {
+    try_unmarshal_error(err).unwrap_or_else(|| SdkError::Core {
+        name: "Unknown".to_string(),
+        message: err.to_string(),
+    })
+}
+
+/// Convert backend transport errors into typed SDK errors when they contain core JSON.
+pub(crate) fn unmarshal_core_error(err: SdkError) -> SdkError {
+    match err {
+        SdkError::Plugin(msg) => unmarshal_error(&msg),
+        SdkError::SharedLib(msg) => try_unmarshal_error(&msg).unwrap_or(SdkError::SharedLib(msg)),
+        err => err,
+    }
+}
+
+pub(crate) fn invalid_utf8_error(err: std::string::FromUtf8Error) -> SdkError {
+    SdkError::Core {
+        name: "InvalidUtf8".to_string(),
+        message: format!("core response was not valid UTF-8: {err}"),
     }
 }
 
@@ -53,7 +73,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unmarshal_core_error() {
+    fn unmarshal_core_json_error() {
         let err = unmarshal_error(r#"{"name":"SomeError","message":"something broke"}"#);
         match err {
             SdkError::Core { name, message } => {
@@ -83,5 +103,22 @@ mod tests {
             SdkError::Core { message, .. } => assert_eq!(message, "not json at all"),
             _ => panic!("expected Core error for invalid JSON"),
         }
+    }
+
+    #[test]
+    fn unmarshal_core_error_preserves_non_json_shared_lib_error() {
+        let err = unmarshal_core_error(SdkError::SharedLib("connection dropped".to_string()));
+        match err {
+            SdkError::SharedLib(message) => assert_eq!(message, "connection dropped"),
+            _ => panic!("expected SharedLib error"),
+        }
+    }
+
+    #[test]
+    fn unmarshal_core_error_maps_json_shared_lib_error() {
+        let err = unmarshal_core_error(SdkError::SharedLib(
+            r#"{"name":"RateLimitExceeded","message":"slow down"}"#.to_string(),
+        ));
+        assert!(matches!(err, SdkError::RateLimitExceeded(_)));
     }
 }

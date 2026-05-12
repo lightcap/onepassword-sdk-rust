@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicU64;
 use crate::core::{ClientConfig, CoreWrapper, InnerClient, Invocation, InvokeConfig, Parameters};
 use crate::core_extism::ExtismCore;
 use crate::environments::{EnvironmentsApi, EnvironmentsSource};
-use crate::errors::{SdkError, unmarshal_error};
+use crate::errors::{SdkError, unmarshal_core_error};
 use crate::groups::{GroupsApi, GroupsSource};
 use crate::items::{ItemsApi, ItemsSource};
 use crate::secrets::{SecretsApi, SecretsSource};
@@ -115,6 +115,7 @@ impl ClientBuilder {
 
         let client_id = core
             .init_client(&self.config)
+            .map_err(unmarshal_core_error)
             .map_err(|e| SdkError::Config(format!("error initializing client: {e}")))?;
 
         let inner = Arc::new(InnerClient {
@@ -146,11 +147,14 @@ pub(crate) fn client_invoke(
 
     match inner.core.invoke(&invoke_config) {
         Ok(response) => Ok(response),
-        Err(SdkError::Plugin(msg)) => {
-            let err = unmarshal_error(&msg);
+        Err(err) => {
+            let err = unmarshal_core_error(err);
             if matches!(err, SdkError::DesktopSessionExpired(_)) {
                 // Re-initialize the client and retry once.
-                let new_id = inner.core.init_client(&inner.config)?;
+                let new_id = inner
+                    .core
+                    .init_client(&inner.config)
+                    .map_err(unmarshal_core_error)?;
                 inner.set_client_id(new_id);
                 let retry_config = InvokeConfig {
                     invocation: Invocation {
@@ -161,18 +165,21 @@ pub(crate) fn client_invoke(
                         },
                     },
                 };
-                inner.core.invoke(&retry_config)
+                inner
+                    .core
+                    .invoke(&retry_config)
+                    .map_err(unmarshal_core_error)
             } else {
                 Err(err)
             }
         }
-        Err(e) => Err(e),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn builder_rejects_both_auth_methods() {
@@ -182,5 +189,44 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("cannot use both"));
+    }
+
+    struct RetryCore {
+        invoke_calls: AtomicUsize,
+    }
+
+    impl crate::core::Core for RetryCore {
+        fn init_client(&self, _config: &[u8]) -> Result<Vec<u8>, SdkError> {
+            Ok(serde_json::to_vec(&99u64).unwrap())
+        }
+
+        fn invoke(&self, _invoke_config: &[u8]) -> Result<Vec<u8>, SdkError> {
+            if self.invoke_calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                Err(SdkError::SharedLib(
+                    r#"{"name":"DesktopSessionExpired","message":"expired"}"#.to_string(),
+                ))
+            } else {
+                Ok(br#""ok""#.to_vec())
+            }
+        }
+
+        fn release_client(&self, _client_id: &[u8]) {}
+    }
+
+    #[test]
+    fn client_invoke_retries_shared_lib_session_expired() {
+        let inner = InnerClient {
+            id: AtomicU64::new(1),
+            config: ClientConfig::new_default(),
+            core: CoreWrapper {
+                inner: Box::new(RetryCore {
+                    invoke_calls: AtomicUsize::new(0),
+                }),
+            },
+        };
+
+        let response = client_invoke(&inner, "SecretsResolve", HashMap::new()).unwrap();
+        assert_eq!(response, r#""ok""#);
+        assert_eq!(inner.client_id(), 99);
     }
 }
