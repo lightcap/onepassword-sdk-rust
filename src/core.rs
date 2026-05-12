@@ -8,7 +8,7 @@ use crate::errors::{SdkError, invalid_utf8_error};
 
 pub(crate) const SDK_LANGUAGE: &str = "Rust";
 pub(crate) const DEFAULT_REQUEST_LIBRARY: &str = "reqwest";
-pub(crate) const MESSAGE_LIMIT: usize = 50 * 1024 * 1024;
+const MESSAGE_LIMIT: usize = 50 * 1024 * 1024;
 
 pub(crate) trait Core: Send + Sync {
     fn init_client(&self, config: &[u8]) -> Result<Vec<u8>, SdkError>;
