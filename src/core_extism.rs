@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use extism::{Manifest, Plugin, PluginBuilder, UserData, ValType, Wasm};
 
-use crate::core::{Core, MESSAGE_LIMIT};
+use crate::core::Core;
 use crate::errors::SdkError;
 
 static CORE_WASM: &[u8] = include_bytes!("../wasm/core.wasm");
@@ -100,12 +100,6 @@ impl Core for ExtismCore {
     }
 
     fn invoke(&self, invoke_config: &[u8]) -> Result<Vec<u8>, SdkError> {
-        if invoke_config.len() > MESSAGE_LIMIT {
-            return Err(SdkError::Config(format!(
-                "message size exceeds the limit of {} bytes",
-                MESSAGE_LIMIT
-            )));
-        }
         let mut plugin = self
             .plugin
             .lock()

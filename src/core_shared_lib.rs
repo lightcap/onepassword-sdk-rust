@@ -37,11 +37,24 @@ struct Request {
 }
 
 /// JSON response envelope received from the shared library.
-/// The `payload` field is a byte array (matching Rust/Python SDK core encoding).
+/// Go's json.Marshal encodes `[]byte` as a base64 string.
 #[derive(Deserialize)]
 struct Response {
     success: bool,
+    #[serde(with = "base64_payload")]
     payload: Vec<u8>,
+}
+
+mod base64_payload {
+    use base64::Engine;
+    use serde::{Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        base64::engine::general_purpose::STANDARD
+            .decode(&s)
+            .map_err(serde::de::Error::custom)
+    }
 }
 
 pub(crate) struct SharedLibCore {
@@ -256,10 +269,10 @@ mod tests {
     }
 
     #[test]
-    fn response_payload_deserializes_from_byte_array() {
+    fn response_payload_deserializes_from_base64() {
         let response_json = serde_json::json!({
             "success": true,
-            "payload": [112, 97, 121, 108, 111, 97, 100],
+            "payload": "cGF5bG9hZA==",
         })
         .to_string();
 
