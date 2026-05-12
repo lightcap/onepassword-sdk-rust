@@ -1,7 +1,28 @@
 version: 2
+
 updates:
+  # Rust / Cargo dependencies
   - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 15
+    groups:
+      rust-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - rust
+
+  # GitHub Actions — supply-chain risk for CI pipelines
+  - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
