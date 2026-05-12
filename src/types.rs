@@ -662,6 +662,48 @@ mod tests {
     }
 
     #[test]
+    fn file_create_params_serializes_content_as_byte_array() {
+        let params = FileCreateParams {
+            name: "file.txt".to_string(),
+            content: b"hello".to_vec(),
+            section_id: "section".to_string(),
+            field_id: "field".to_string(),
+        };
+
+        let value = serde_json::to_value(&params).unwrap();
+        assert_eq!(
+            value["content"],
+            serde_json::json!([104, 101, 108, 108, 111])
+        );
+
+        let parsed: FileCreateParams = serde_json::from_value(value).unwrap();
+        assert_eq!(parsed.content, b"hello");
+    }
+
+    #[test]
+    fn document_create_params_serializes_content_as_byte_array() {
+        let params = DocumentCreateParams {
+            name: "document.txt".to_string(),
+            content: b"document".to_vec(),
+        };
+
+        let value = serde_json::to_value(&params).unwrap();
+        assert_eq!(
+            value["content"],
+            serde_json::json!([100, 111, 99, 117, 109, 101, 110, 116])
+        );
+
+        let parsed: DocumentCreateParams = serde_json::from_value(value).unwrap();
+        assert_eq!(parsed.content, b"document");
+    }
+
+    #[test]
+    fn file_read_response_deserializes_from_byte_array() {
+        let parsed: Vec<u8> = serde_json::from_str("[114,101,115,112,111,110,115,101]").unwrap();
+        assert_eq!(parsed, b"response");
+    }
+
+    #[test]
     fn item_field_details_roundtrip() {
         let details = ItemFieldDetails::Otp(OTPFieldDetails {
             code: Some("123456".to_string()),

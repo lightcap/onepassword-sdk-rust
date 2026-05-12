@@ -3,20 +3,20 @@ all-features = true
 
 [advisories]
 unmaintained = "workspace"
+unused-ignored-advisory = "deny"
 ignore = [
-    # wasmtime v41 is pinned by extism — can't upgrade until extism bumps its dep
-    "RUSTSEC-2026-0085",
-    "RUSTSEC-2026-0086",
-    "RUSTSEC-2026-0087",
-    "RUSTSEC-2026-0088",
-    "RUSTSEC-2026-0089",
-    "RUSTSEC-2026-0091",
-    "RUSTSEC-2026-0092",
-    "RUSTSEC-2026-0093",
-    "RUSTSEC-2026-0094",
-    "RUSTSEC-2026-0095",
-    "RUSTSEC-2026-0096",
-    "RUSTSEC-2026-0114",
+    { id = "RUSTSEC-2026-0085", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0086", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0087", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0088", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0089", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0091", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0092", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0093", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0094", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0095", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0096", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
+    { id = "RUSTSEC-2026-0114", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },
 ]
 
 [bans]

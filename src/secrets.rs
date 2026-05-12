@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use crate::client::client_invoke;
 use crate::core::{CoreWrapper, InnerClient};
-use crate::errors::SdkError;
+use crate::errors::{SdkError, unmarshal_core_error};
 use crate::types::{GeneratePasswordResponse, PasswordRecipe, ResolveAllResponse};
 
 /// Shared ExtismCore instance for standalone operations (no client required).
@@ -82,7 +82,7 @@ impl Secrets {
                 },
             },
         };
-        core.invoke(&invoke_config)?;
+        core.invoke(&invoke_config).map_err(unmarshal_core_error)?;
         Ok(())
     }
 
@@ -101,7 +101,7 @@ impl Secrets {
                 },
             },
         };
-        let result_string = core.invoke(&invoke_config)?;
+        let result_string = core.invoke(&invoke_config).map_err(unmarshal_core_error)?;
         let result: GeneratePasswordResponse = serde_json::from_str(&result_string)?;
         Ok(result)
     }

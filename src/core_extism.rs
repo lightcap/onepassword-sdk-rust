@@ -133,13 +133,26 @@ fn random_fill(
     outputs: &mut [extism::Val],
     _user_data: UserData<()>,
 ) -> Result<(), extism::Error> {
-    let length = inputs[0].unwrap_i32() as u32;
-    let mut buf = vec![0u8; length as usize];
+    let length = random_fill_length(inputs)?;
+    let mut buf = vec![0u8; length];
     getrandom::getrandom(&mut buf)
         .map_err(|e| extism::Error::msg(format!("getrandom failed: {e}")))?;
     let handle = plugin.memory_new(&buf)?;
     outputs[0] = plugin.memory_to_val(handle);
     Ok(())
+}
+
+fn random_fill_length(inputs: &[extism::Val]) -> Result<usize, extism::Error> {
+    let length = inputs
+        .first()
+        .ok_or_else(|| extism::Error::msg("random_fill_imported missing length argument"))?
+        .unwrap_i32();
+    if length < 0 {
+        return Err(extism::Error::msg(format!(
+            "random_fill_imported length must be non-negative, got {length}"
+        )));
+    }
+    Ok(length as usize)
 }
 
 /// Host function: return current Unix timestamp in milliseconds.
@@ -164,4 +177,26 @@ fn utc_offset_seconds(
     let offset_secs = chrono::Local::now().offset().local_minus_utc();
     outputs[0] = extism::Val::I64(offset_secs as i64);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn random_fill_length_rejects_negative_lengths() {
+        let err = random_fill_length(&[extism::Val::I32(-1)]).unwrap_err();
+        assert!(err.to_string().contains("non-negative"));
+    }
+
+    #[test]
+    fn random_fill_length_rejects_empty_inputs() {
+        let err = random_fill_length(&[]).unwrap_err();
+        assert!(err.to_string().contains("missing length argument"));
+    }
+
+    #[test]
+    fn random_fill_length_accepts_non_negative_lengths() {
+        assert_eq!(random_fill_length(&[extism::Val::I32(32)]).unwrap(), 32);
+    }
 }
