@@ -15,5 +15,5 @@ fn main() {
         .resolve("op://vault/item/field")
         .expect("Failed to resolve secret");
 
-    println!("Secret: {secret}");
+    println!("Secret length: {}", secret.len());
 }

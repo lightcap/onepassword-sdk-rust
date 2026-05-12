@@ -18,7 +18,7 @@ fn main() {
         .resolve(&secret_ref)
         .expect("Failed to resolve secret");
 
-    println!("{secret}");
+    println!("Secret length: {}", secret.len());
 }
 
 #[cfg(not(feature = "desktop"))]
