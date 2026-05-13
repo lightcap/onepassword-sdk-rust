@@ -5,7 +5,7 @@ fn main() {
     let account = std::env::var("OP_ACCOUNT")
         .expect("Set OP_ACCOUNT to your 1Password sign-in address (e.g. my.1password.com)");
     let secret_ref = std::env::var("OP_SECRET_REF")
-        .unwrap_or_else(|_| "op://Private/chess.com/username".to_string());
+        .unwrap_or_else(|_| "op://MyVault/Example/username".to_string());
 
     let client = Client::builder()
         .desktop_app_integration(&account)
