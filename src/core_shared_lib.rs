@@ -127,7 +127,7 @@ impl SharedLibCore {
             if !out_buf.is_null() {
                 unsafe { (self.free_response)(out_buf, out_len, out_cap) };
             }
-            return error_from_return_code(ret_code);
+            error_from_return_code(ret_code)?;
         }
 
         // Copy the response bytes before freeing the library-owned buffer.
