@@ -135,9 +135,10 @@ pub(crate) fn client_invoke(
     method: &str,
     params: HashMap<String, serde_json::Value>,
 ) -> Result<String, SdkError> {
+    let stale_id = inner.client_id();
     let invoke_config = InvokeConfig {
         invocation: Invocation {
-            client_id: Some(inner.client_id()),
+            client_id: Some(stale_id),
             parameters: Parameters {
                 name: method.to_string(),
                 parameters: params,
@@ -153,6 +154,7 @@ pub(crate) fn client_invoke(
                 retry_invoke(
                     inner,
                     method,
+                    stale_id,
                     invoke_config.invocation.parameters.parameters,
                 )
             } else {
@@ -165,19 +167,27 @@ pub(crate) fn client_invoke(
 fn retry_invoke(
     inner: &InnerClient,
     method: &str,
+    stale_id: u64,
     params: HashMap<String, serde_json::Value>,
 ) -> Result<String, SdkError> {
     let _guard = inner
         .retry_lock
         .lock()
         .map_err(|e| SdkError::Config(format!("retry lock poisoned: {e}")))?;
-    let old_id = inner.client_id();
-    let new_id = inner
-        .core
-        .init_client(&inner.config)
-        .map_err(unmarshal_core_error)?;
-    inner.core.release_client(old_id);
-    inner.set_client_id(new_id);
+
+    let current_id = inner.client_id();
+    let new_id = if current_id == stale_id {
+        let id = inner
+            .core
+            .init_client(&inner.config)
+            .map_err(unmarshal_core_error)?;
+        inner.core.release_client(stale_id);
+        inner.set_client_id(id);
+        id
+    } else {
+        current_id
+    };
+
     let retry_config = InvokeConfig {
         invocation: Invocation {
             client_id: Some(new_id),

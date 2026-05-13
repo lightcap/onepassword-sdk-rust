@@ -123,10 +123,14 @@ impl SharedLibCore {
             )
         };
 
-        error_from_return_code(ret_code)?;
+        if ret_code != 0 {
+            if !out_buf.is_null() {
+                unsafe { (self.free_response)(out_buf, out_len, out_cap) };
+            }
+            return error_from_return_code(ret_code);
+        }
 
         // Copy the response bytes before freeing the library-owned buffer.
-        // Always free if out_buf is non-null, even if out_len is 0.
         let resp_bytes = if !out_buf.is_null() {
             let bytes = if out_len > 0 {
                 unsafe { std::slice::from_raw_parts(out_buf, out_len).to_vec() }
