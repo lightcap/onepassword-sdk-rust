@@ -18,10 +18,7 @@ pub(crate) trait Core: Send + Sync {
 
 #[derive(Serialize)]
 pub(crate) struct ClientConfig {
-    #[serde(
-        rename = "serviceAccountToken",
-        skip_serializing_if = "String::is_empty"
-    )]
+    #[serde(rename = "serviceAccountToken")]
     pub sa_token: String,
     #[serde(rename = "programmingLanguage")]
     pub language: String,
@@ -41,7 +38,7 @@ pub(crate) struct ClientConfig {
     pub system_os_version: String,
     #[serde(rename = "architecture")]
     pub system_arch: String,
-    #[serde(skip_serializing)]
+    #[serde(rename = "account_name", skip_serializing_if = "Option::is_none")]
     pub account_name: Option<String>,
 }
 
@@ -183,22 +180,23 @@ mod tests {
     }
 
     #[test]
-    fn service_account_config_serializes_token() {
+    fn service_account_config_omits_account_name() {
         let mut config = ClientConfig::new_default();
         config.sa_token = "ops_test".to_string();
 
         let value = serde_json::to_value(&config).unwrap();
         assert_eq!(value["serviceAccountToken"], "ops_test");
+        assert!(value.get("account_name").is_none());
     }
 
     #[test]
-    fn desktop_config_omits_auth_fields_from_core_config() {
+    fn desktop_config_includes_account_name() {
         let mut config = ClientConfig::new_default();
         config.account_name = Some("myaccount".to_string());
 
         let value = serde_json::to_value(&config).unwrap();
-        assert!(value.get("serviceAccountToken").is_none());
-        assert!(value.get("account_name").is_none());
+        assert_eq!(value["serviceAccountToken"], "");
+        assert_eq!(value["account_name"], "myaccount");
     }
 
     struct InvalidUtf8Core;

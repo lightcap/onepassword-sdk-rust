@@ -37,23 +37,33 @@ struct Request {
 }
 
 /// JSON response envelope received from the shared library.
-/// Go's json.Marshal encodes `[]byte` as a base64 string.
+/// The payload may arrive as either a base64 string (Go's json.Marshal of []byte)
+/// or a raw JSON byte array, depending on the library version.
 #[derive(Deserialize)]
 struct Response {
     success: bool,
-    #[serde(with = "base64_payload")]
+    #[serde(with = "flexible_payload")]
     payload: Vec<u8>,
 }
 
-mod base64_payload {
+mod flexible_payload {
     use base64::Engine;
     use serde::{Deserialize, Deserializer};
 
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum BytesOrBase64 {
+        Bytes(Vec<u8>),
+        Base64(String),
+    }
+
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
-        let s = String::deserialize(deserializer)?;
-        base64::engine::general_purpose::STANDARD
-            .decode(&s)
-            .map_err(serde::de::Error::custom)
+        match BytesOrBase64::deserialize(deserializer)? {
+            BytesOrBase64::Bytes(v) => Ok(v),
+            BytesOrBase64::Base64(s) => base64::engine::general_purpose::STANDARD
+                .decode(&s)
+                .map_err(serde::de::Error::custom),
+        }
     }
 }
 
@@ -283,5 +293,18 @@ mod tests {
         let response: Response = serde_json::from_str(&response_json).unwrap();
         assert!(response.success);
         assert_eq!(response.payload, b"payload");
+    }
+
+    #[test]
+    fn response_payload_deserializes_from_byte_array() {
+        let response_json = serde_json::json!({
+            "success": false,
+            "payload": [104, 101, 108, 108, 111],
+        })
+        .to_string();
+
+        let response: Response = serde_json::from_str(&response_json).unwrap();
+        assert!(!response.success);
+        assert_eq!(response.payload, b"hello");
     }
 }
