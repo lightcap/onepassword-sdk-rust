@@ -1,0 +1,39 @@
+name: Upstream Extism Watch
+
+on:
+  schedule:
+    - cron: "0 15 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-fixed-extism:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Explain watch condition
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          This job tests whether a newer released Extism dependency clears the
+          temporary Wasmtime advisory ignores tracked in #2. If `cargo-deny`
+          fails with unused ignored advisories after the lockfile update,
+          update Extism, remove the stale ignores from `deny.toml`, and close #2.
+          EOF
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93.1"
+
+      - name: Try latest Extism-compatible lockfile
+        run: |
+          set -euxo pipefail
+          cargo update -p extism -p extism-convert -p extism-convert-macros -p extism-manifest
+
+      - name: Check advisories after Extism update
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          rust-version: "1.93.1"
+          command: check advisories
