@@ -1289,7 +1289,7 @@ dependencies = [
  "base64",
  "chrono",
  "extism",
- "getrandom 0.2.17",
+ "getrandom 0.4.2",
  "libloading",
  "serde",
  "serde_json",
