@@ -25,17 +25,11 @@
 
 ## Get started
 
-Add the SDK to your project:
-
-```bash
-cargo add onepassword-sdk
-```
-
-Or add it to your `Cargo.toml` manually:
+Add the SDK to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-onepassword-sdk = "0.4"
+onepassword-sdk = { git = "https://github.com/1Password/onepassword-sdk-rust" }
 ```
 
 You can choose between two [authentication methods](https://developer.1password.com/docs/sdks/concepts#authentication): local authorization prompts from the [1Password desktop app](#option-1-1password-desktop-app) or automated authentication with a [1Password Service Account](#option-2-1password-service-account).
@@ -52,7 +46,7 @@ You can choose between two [authentication methods](https://developer.1password.
 
    ```toml
    [dependencies]
-   onepassword-sdk = { version = "0.4", default-features = false, features = ["desktop"] }
+   onepassword-sdk = { git = "https://github.com/1Password/onepassword-sdk-rust", default-features = false, features = ["desktop"] }
    ```
 
 6. Use the SDK in your project, replacing `your-account-name` with the name of your 1Password account:
@@ -145,6 +139,14 @@ let refs = vec![
 let resolved = client.secrets().resolve_all(&refs)?;
 ```
 
+Validate a secret reference URI without resolving it (no client required):
+
+```rust
+use onepassword_sdk::Secrets;
+
+Secrets::validate_secret_reference("op://vault/item/field")?;
+```
+
 ### Manage items
 
 Create, retrieve, update, delete, archive, and list items:
@@ -157,23 +159,30 @@ let params = ItemCreateParams {
     title: "My Login".to_string(),
     category: ItemCategory::Login,
     vault_id: "vault-uuid".to_string(),
-    fields: vec![
+    fields: Some(vec![
         ItemField {
             id: "username".to_string(),
             title: "Username".to_string(),
             value: "user@example.com".to_string(),
             field_type: ItemFieldType::Text,
-            ..Default::default()
+            section_id: None,
+            details: None,
         },
         ItemField {
             id: "password".to_string(),
             title: "Password".to_string(),
             value: "my-secret-password".to_string(),
             field_type: ItemFieldType::Concealed,
-            ..Default::default()
+            section_id: None,
+            details: None,
         },
-    ],
-    ..Default::default()
+    ]),
+    sections: None,
+    notes: None,
+    tags: None,
+    websites: None,
+    files: None,
+    document: None,
 };
 let item = client.items().create(params)?;
 
@@ -193,12 +202,28 @@ client.items().archive("vault-uuid", "item-uuid")?;
 client.items().delete("vault-uuid", "item-uuid")?;
 ```
 
+#### Batch operations
+
+Create, get, or delete multiple items in a single call:
+
+```rust
+// Create multiple items at once
+let response = client.items().create_all("vault-uuid", &[params1, params2])?;
+
+// Get multiple items by ID
+let item_ids = vec!["item-1".to_string(), "item-2".to_string()];
+let response = client.items().get_all("vault-uuid", &item_ids)?;
+
+// Delete multiple items
+let response = client.items().delete_all("vault-uuid", &item_ids)?;
+```
+
 ### Manage files
 
 Attach, read, delete files and replace documents on items:
 
 ```rust
-use onepassword_sdk::{ItemsApi, FileCreateParams, FileAttributes};
+use onepassword_sdk::{ItemsApi, FileCreateParams, FileAttributes, DocumentCreateParams};
 
 // Attach a file to an item
 let file_params = FileCreateParams {
@@ -215,6 +240,16 @@ let content: Vec<u8> = client.items().files().read(
     "item-uuid",
     FileAttributes { name: "config.json".to_string(), id: "file-uuid".to_string(), size: 1024 },
 )?;
+
+// Delete a file from an item
+let updated_item = client.items().files().delete(item, "section-uuid", "field-uuid")?;
+
+// Replace a document item's content
+let doc_params = DocumentCreateParams {
+    name: "updated-doc.pdf".to_string(),
+    content: std::fs::read("updated-doc.pdf")?,
+};
+let updated_item = client.items().files().replace_document(item, doc_params)?;
 ```
 
 ### Share items
@@ -265,7 +300,7 @@ println!("Generated password length: {}", response.password.len());
 Create, retrieve, update, delete, and list vaults:
 
 ```rust
-use onepassword_sdk::{Client, VaultsApi, VaultCreateParams};
+use onepassword_sdk::{Client, VaultsApi, VaultCreateParams, VaultGetParams, VaultUpdateParams};
 
 // Create a vault
 let params = VaultCreateParams {
@@ -274,6 +309,18 @@ let params = VaultCreateParams {
     allow_admins_access: Some(true),
 };
 let vault = client.vaults().create(params)?;
+
+// Get a vault overview (lightweight)
+let overview = client.vaults().get_overview("vault-uuid")?;
+
+// Get full vault details (with optional accessor info)
+let vault = client.vaults().get("vault-uuid", VaultGetParams { accessors: Some(true) })?;
+
+// Update a vault
+let updated = client.vaults().update("vault-uuid", VaultUpdateParams {
+    title: Some("Renamed Vault".to_string()),
+    description: None,
+})?;
 
 // List vaults
 let vault_overviews = client.vaults().list(None)?;
@@ -287,7 +334,7 @@ client.vaults().delete("vault-uuid")?;
 Grant, update, and revoke group permissions on vaults:
 
 ```rust
-use onepassword_sdk::{VaultsApi, GroupAccess, permissions};
+use onepassword_sdk::{VaultsApi, GroupAccess, GroupVaultAccess, permissions};
 
 // Grant group access to a vault
 let access = GroupAccess {
@@ -295,6 +342,14 @@ let access = GroupAccess {
     permissions: permissions::READ_ITEMS | permissions::CREATE_ITEMS,
 };
 client.vaults().grant_group_permissions("vault-uuid", &[access])?;
+
+// Update existing group permissions
+let updated_access = GroupVaultAccess {
+    vault_id: "vault-uuid".to_string(),
+    group_id: "group-uuid".to_string(),
+    permissions: permissions::READ_ITEMS | permissions::UPDATE_ITEMS | permissions::CREATE_ITEMS,
+};
+client.vaults().update_group_permissions(&[updated_access])?;
 
 // Revoke group access
 client.vaults().revoke_group_permissions("vault-uuid", "group-uuid")?;
