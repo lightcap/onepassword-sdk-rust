@@ -2,7 +2,7 @@
 all-features = true
 
 [advisories]
-unmaintained = "workspace"
+unmaintained = "all"
 unused-ignored-advisory = "deny"
 ignore = [
     { id = "RUSTSEC-2026-0085", reason = "Upstream-blocked by extism 1.21.0's wasmtime ^41 dependency. The SDK runs vendor-provided 1Password core.wasm only; remove when extism/extism#901 is released." },

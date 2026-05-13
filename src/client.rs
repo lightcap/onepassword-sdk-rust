@@ -171,10 +171,12 @@ fn retry_invoke(
         .retry_lock
         .lock()
         .map_err(|e| SdkError::Config(format!("retry lock poisoned: {e}")))?;
+    let old_id = inner.client_id();
     let new_id = inner
         .core
         .init_client(&inner.config)
         .map_err(unmarshal_core_error)?;
+    inner.core.release_client(old_id);
     inner.set_client_id(new_id);
     let retry_config = InvokeConfig {
         invocation: Invocation {
