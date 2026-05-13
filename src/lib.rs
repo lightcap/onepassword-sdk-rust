@@ -2,6 +2,7 @@
 
 mod client;
 mod core;
+#[cfg(feature = "wasm")]
 mod core_extism;
 mod environments;
 mod errors;

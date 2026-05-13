@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
 use crate::core::{ClientConfig, CoreWrapper, InnerClient, Invocation, InvokeConfig, Parameters};
+#[cfg(feature = "wasm")]
 use crate::core_extism::ExtismCore;
 use crate::environments::{EnvironmentsApi, EnvironmentsSource};
 use crate::errors::{SdkError, unmarshal_core_error};
@@ -108,7 +109,16 @@ impl ClientBuilder {
                 ));
             }
         } else {
-            Box::new(ExtismCore::new()?)
+            #[cfg(feature = "wasm")]
+            {
+                Box::new(ExtismCore::new()?)
+            }
+            #[cfg(not(feature = "wasm"))]
+            {
+                return Err(SdkError::Config(
+                    "WASM core requires the 'wasm' feature (enabled by default)".to_string(),
+                ));
+            }
         };
 
         let core = CoreWrapper { inner: core_impl };

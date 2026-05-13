@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+#[cfg(feature = "wasm")]
 use std::sync::LazyLock;
 
 use crate::client::client_invoke;
@@ -6,8 +7,7 @@ use crate::core::{CoreWrapper, InnerClient};
 use crate::errors::{SdkError, unmarshal_core_error};
 use crate::types::{GeneratePasswordResponse, PasswordRecipe, ResolveAllResponse};
 
-/// Shared ExtismCore instance for standalone operations (no client required).
-/// Avoids recompiling the ~9.5MB WASM binary on every call.
+#[cfg(feature = "wasm")]
 static STANDALONE_CORE: LazyLock<Result<CoreWrapper, String>> = LazyLock::new(|| {
     let core = crate::core_extism::ExtismCore::new().map_err(|e| e.to_string())?;
     Ok(CoreWrapper {
@@ -15,10 +15,18 @@ static STANDALONE_CORE: LazyLock<Result<CoreWrapper, String>> = LazyLock::new(||
     })
 });
 
+#[cfg(feature = "wasm")]
 fn standalone_core() -> Result<&'static CoreWrapper, SdkError> {
     STANDALONE_CORE
         .as_ref()
         .map_err(|e| SdkError::Plugin(e.clone()))
+}
+
+#[cfg(not(feature = "wasm"))]
+fn standalone_core() -> Result<&'static CoreWrapper, SdkError> {
+    Err(SdkError::Config(
+        "standalone secrets require the 'wasm' feature (enabled by default)".to_string(),
+    ))
 }
 
 pub trait SecretsApi {
