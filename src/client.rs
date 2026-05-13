@@ -148,7 +148,7 @@ pub(crate) fn client_invoke(
 
     match inner.core.invoke(&invoke_config) {
         Ok(response) => Ok(response),
-        Err(err) => {
+        Err(err) if matches!(err, SdkError::Plugin(_) | SdkError::SharedLib(_)) => {
             let err = unmarshal_core_error(err);
             if matches!(err, SdkError::DesktopSessionExpired(_)) {
                 retry_invoke(
@@ -161,6 +161,7 @@ pub(crate) fn client_invoke(
                 Err(err)
             }
         }
+        Err(err) => Err(err),
     }
 }
 
