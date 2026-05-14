@@ -29,7 +29,7 @@ Add the SDK to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-onepassword-sdk = { git = "https://github.com/1Password/onepassword-sdk-rust" }
+onepassword-sdk = { git = "https://github.com/lightcap/onepassword-sdk-rust" }
 ```
 
 You can choose between two [authentication methods](https://developer.1password.com/docs/sdks/concepts#authentication): local authorization prompts from the [1Password desktop app](#option-1-1password-desktop-app) or automated authentication with a [1Password Service Account](#option-2-1password-service-account).
@@ -46,7 +46,7 @@ You can choose between two [authentication methods](https://developer.1password.
 
    ```toml
    [dependencies]
-   onepassword-sdk = { git = "https://github.com/1Password/onepassword-sdk-rust", default-features = false, features = ["desktop"] }
+   onepassword-sdk = { git = "https://github.com/lightcap/onepassword-sdk-rust", default-features = false, features = ["desktop"] }
    ```
 
 6. Use the SDK in your project, replacing `your-account-name` with the name of your 1Password account:
@@ -221,7 +221,7 @@ let response = client.items().delete_all("vault-uuid", &item_ids)?;
 Attach, read, delete files and replace documents on items:
 
 ```rust
-use onepassword_sdk::{ItemsApi, FileCreateParams, FileAttributes, DocumentCreateParams};
+use onepassword_sdk::{ItemsApi, ItemsFilesApi, FileCreateParams, FileAttributes, DocumentCreateParams};
 
 // Attach a file to an item
 let file_params = FileCreateParams {
@@ -255,7 +255,7 @@ let updated_item = client.items().files().replace_document(item, doc_params)?;
 Share items securely with other users:
 
 ```rust
-use onepassword_sdk::{ItemsApi, ItemShareParams, ItemShareDuration};
+use onepassword_sdk::{ItemsApi, ItemsSharesApi, ItemShareParams, ItemShareDuration};
 
 // Get the sharing policy for the item
 let policy = client.items().shares().get_account_policy("vault-uuid", "item-uuid")?;
