@@ -66,8 +66,7 @@ fn main() {
         .resolve("op://vault/item/field")
         .expect("Failed to resolve secret");
 
-    // Use the secret value
-    println!("Secret length: {}", secret.len());
+    println!("Secret resolved successfully");
 }
 ```
 
@@ -110,8 +109,7 @@ fn main() {
         .resolve("op://vault/item/field")
         .expect("Failed to resolve secret");
 
-    // Use the secret value
-    println!("Secret length: {}", secret.len());
+    println!("Secret resolved successfully");
 }
 ```
 
@@ -292,7 +290,7 @@ let response = Secrets::generate_password(
         include_symbols: true,
     }),
 )?;
-println!("Generated password length: {}", response.password.len());
+println!("Password generated successfully");
 ```
 
 ### Manage vaults
@@ -401,7 +399,7 @@ All SDK operations return `Result<T, SdkError>`. The error variants are:
 use onepassword_sdk::{Client, SecretsApi, SdkError};
 
 match client.secrets().resolve("op://vault/item/field") {
-    Ok(secret) => println!("Secret length: {}", secret.len()),
+    Ok(_) => println!("Secret resolved successfully"),
     Err(SdkError::Core { name, message }) => {
         eprintln!("1Password error ({}): {}", name, message);
     }
