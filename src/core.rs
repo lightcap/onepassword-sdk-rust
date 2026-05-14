@@ -10,6 +10,13 @@ pub(crate) const SDK_LANGUAGE: &str = "Rust";
 pub(crate) const DEFAULT_REQUEST_LIBRARY: &str = "reqwest";
 const MESSAGE_LIMIT: usize = 50 * 1024 * 1024;
 
+fn normalize_os() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "darwin",
+        os => os,
+    }
+}
+
 pub(crate) trait Core: Send + Sync {
     fn init_client(&self, config: &[u8]) -> Result<Vec<u8>, SdkError>;
     fn invoke(&self, invoke_config: &[u8]) -> Result<Vec<u8>, SdkError>;
@@ -68,7 +75,7 @@ impl ClientConfig {
             integration_version: "Unknown".to_string(),
             request_library_name: DEFAULT_REQUEST_LIBRARY.to_string(),
             request_library_version: "0.0.0".to_string(),
-            system_os: std::env::consts::OS.to_string(),
+            system_os: normalize_os().to_string(),
             system_os_version: "0.0.0".to_string(),
             system_arch: std::env::consts::ARCH.to_string(),
             account_name: None,
@@ -152,7 +159,7 @@ mod tests {
     fn default_config_has_correct_language() {
         let config = ClientConfig::new_default();
         assert_eq!(config.language, "Rust");
-        assert_eq!(config.system_os, std::env::consts::OS);
+        assert_eq!(config.system_os, super::normalize_os());
         assert_eq!(config.system_arch, std::env::consts::ARCH);
     }
 
