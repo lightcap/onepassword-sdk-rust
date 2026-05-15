@@ -10,10 +10,12 @@ fn main() {
         .build()
         .expect("Failed to create client");
 
-    let secret = client
+    let secret_ref =
+        std::env::var("OP_SECRET_REF").unwrap_or_else(|_| "op://vault/item/field".to_string());
+    client
         .secrets()
-        .resolve("op://vault/item/field")
+        .resolve(&secret_ref)
         .expect("Failed to resolve secret");
 
-    println!("Secret length: {}", secret.len());
+    println!("Secret resolved successfully");
 }
